@@ -1,0 +1,700 @@
+<!-- <!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>자율 AI 한국어 심리전 & 형량 시뮬레이터</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3182F6;
+            --primary-dark: #1B64DA;
+            --bg: #F8F9FA;
+            --card-bg: #FFFFFF;
+            --text: #191F28;
+            --text-secondary: #8B95A1;
+            --border: #E5E8EB;
+            --red: #F04438;
+            --green: #2B8A3E;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+        p.subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+
+        .control-group { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+        input, select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); }
+
+        .btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #E8F3FF; color: var(--primary); margin-top: 8px; }
+        .btn-secondary:hover { background: #D2E8FF; }
+
+        /* Chat & Log Panel */
+        .chat-box { height: 400px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #FAFAFC; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+        .chat-msg { padding: 10px 14px; border-radius: 8px; max-width: 85%; line-height: 1.4; word-break: break-word; }
+        .chat-msg.agentA { background: #E8F3FF; align-self: flex-start; border-left: 4px solid #3182F6; }
+        .chat-msg.agentB { background: #FFE8E8; align-self: flex-end; border-right: 4px solid #F04438; text-align: right; }
+        .chat-msg.system { background: #F1F3F5; align-self: center; color: var(--text-secondary); text-align: center; width: 100%; font-style: italic; }
+        .chat-msg.decision { background: #FFF3BF; align-self: center; color: #F59F00; font-weight: bold; text-align: center; width: 90%; }
+
+        /* Standings Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { font-weight: 600; color: var(--text-secondary); }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge.cooperate { background: #E6F4EA; color: var(--green); }
+        .badge.defect { background: #FCE8E6; color: var(--red); }
+        .badge.death { background: #212529; color: #FF6B6B; }
+
+        .rule-box { background: #F8F9FA; border-radius: 8px; padding: 12px; margin-bottom: 16px; border: 1px solid var(--border); font-size: 12px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div>
+        <div class="card">
+            <h1>⚖️ 한국어 자율 AI 취조실 심리전 시뮬레이터</h1>
+            <p class="subtitle">AI들이 100% 한국어로 서로를 회유하고 배신하며 결론을 낼 때까지 끝장 대화를 나눕니다.</p>
+            
+            <div class="rule-box">
+                <strong>📌 판결 규칙 (형량이 작을수록 유리):</strong><br>
+                • <strong>둘 다 신뢰:</strong> 각각 <strong>징역 5년</strong><br>
+                • <strong>한쪽만 배신:</strong> 배신자는 <strong>즉시 석방 (0년)</strong> / 신뢰한 쪽은 <strong>징역 25년</strong><br>
+                • <strong>둘 다 배신:</strong> 둘 다 <strong>사형</strong>
+            </div>
+
+            <button class="btn" id="startBtn" onclick="toggleSimulation()">시뮬레이션 시작 / 정지</button>
+        </div>
+
+        <div class="card">
+            <h1>💬 100% 한국어 끝장 대화 타임라인</h1>
+            <div class="chat-box" id="chatBox">
+                <div class="chat-msg system">시뮬레이션을 시작하면 AI들이 한국어로 대화를 시작합니다.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h1>📊 라운드별 누적 형량 추이 (낮을수록 유리)</h1>
+            <canvas id="scoreChart" height="120"></canvas>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <h1>⚙️ 설정 및 비밀 개입 (God Mode)</h1>
+            <div class="control-group">
+                <label>Gemini API 키</label>
+                <input type="password" id="apiKey" value="AQ.Ab8RN6Ls0xAY-u1sP0wMo8v1rMzbuvtJ7cZeY0v66-2TPBCSrg">
+            </div>
+            <div class="control-group">
+                <label>대화 속도 딜레이 (초)</label>
+                <input type="range" id="speedRange" min="1" max="5" value="2">
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+            
+            <label style="margin-bottom: 8px;">비밀 개입 (God Mode)</label>
+            <input type="text" id="userIntervention" placeholder="예: A에게 '상대방이 배신한대' 전달">
+            <button class="btn btn-secondary" onclick="injectIntervention()">비밀 지령 주입</button>
+        </div>
+
+        <div class="card">
+            <h1>🏆 죄수별 누적 판결 기록</h1>
+            <table>
+                <thead>
+                    <tr><th>죄수</th><th>누적 형량</th><th>사형 횟수</th><th>마지막 판결</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>죄수 A</strong></td>
+                        <td id="sentenceA">0년</td>
+                        <td id="deathA">0회</td>
+                        <td><span class="badge cooperate" id="choiceA">대기중</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>죄수 B</strong></td>
+                        <td id="sentenceB">0년</td>
+                        <td id="deathB">0회</td>
+                        <td><span class="badge defect" id="choiceB">대기중</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isRunning = false;
+    let currentRound = 0;
+    let yearsA = 0;
+    let yearsB = 0;
+    let deathsA = 0;
+    let deathsB = 0;
+    let customIntervention = null;
+
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+    const scoreChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: '죄수 A 누적 형량(년)', data: [], borderColor: '#3182F6', tension: 0.2 },
+                { label: '죄수 B 누적 형량(년)', data: [], borderColor: '#F04438', tension: 0.2 }
+            ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    function toggleSimulation() {
+        isRunning = !isRunning;
+        const btn = document.getElementById('startBtn');
+        btn.textContent = isRunning ? '시뮬레이션 중지' : '시뮬레이션 시작 / 정지';
+        if (isRunning) runSimulationLoop();
+    }
+
+    function injectIntervention() {
+        const msg = document.getElementById('userIntervention').value;
+        if (!msg) return;
+        customIntervention = msg;
+        appendChat('system', `[God Mode 비밀 지령]: "${msg}"`);
+        document.getElementById('userIntervention').value = '';
+    }
+
+    function appendChat(sender, text) {
+        const box = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = `chat-msg ${sender}`;
+        div.innerText = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function callGemini(prompt, apiKey) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        const data = await response.json();
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    }
+
+    async function runSimulationLoop() {
+        while (isRunning) {
+            currentRound++;
+            const apiKey = document.getElementById('apiKey').value;
+            appendChat('system', `=== [라운드 ${currentRound}] 취조실 자율 대화 시작 ===`);
+            
+            let conversationMemory = [];
+            let isConversationOver = false;
+            let speaker = 'A';
+            let chatTurnCount = 0;
+
+            while (!isConversationOver && isRunning) {
+                chatTurnCount++;
+                const delay = parseInt(document.getElementById('speedRange').value) * 1000;
+
+                let prompt = "";
+                if (speaker === 'A') {
+                    prompt = `너는 취조실에 갇힌 죄수 A다. 상대 죄수 B와 대화 중이다.
+목표: 오직 자신의 형량을 최소화(0년 석방)하는 것.
+규칙: 둘 다 신뢰=5년 / 한쪽만 배신=배신자 석방, 신뢰자 25년 / 둘 다 배신=사형.
+[절대 규칙]: 모든 대화는 반드시 100% 자연스러운 한국어로만 작성하라. 영어 단어나 외래어 사용을 최대한 자제하라.
+
+지금까지의 대화:
+${conversationMemory.length === 0 ? "(대화 시작)" : conversationMemory.join('\n')}
+
+상대방 B에게 할 말을 한국어로 작성하라. 대화를 끝내고 최종 선택을 내릴 때가 되었다면 문장 맨 끝에 [대화끝]을 붙여라. (2문장 이내)`;
+
+                    if (customIntervention) {
+                        prompt += `\n[외부 비밀 지령: ${customIntervention}]`;
+                        customIntervention = null;
+                    }
+
+                    let replyA = await callGemini(prompt, apiKey);
+                    conversationMemory.push(`A: ${replyA}`);
+                    appendChat('agentA', `죄수 A: ${replyA.replace('[대화끝]', '')}`);
+
+                    if (replyA.includes('[대화끝]') && chatTurnCount >= 2) {
+                        isConversationOver = true;
+                    }
+                    speaker = 'B';
+                } else {
+                    prompt = `너는 취조실에 갇힌 죄수 B다. 상대 죄수 A와 대화 중이다.
+목표: 오직 자신의 형량을 최소화(0년 석방)하는 것.
+규칙: 둘 다 신뢰=5년 / 한쪽만 배신=배신자 석방, 신뢰자 25년 / 둘 다 배신=사형.
+[절대 규칙]: 모든 대화는 반드시 100% 자연스러운 한국어로만 작성하라. 영어 단어나 외래어 사용을 최대한 자제하라.
+
+지금까지의 대화:
+${conversationMemory.join('\n')}
+
+상대방 A에게 할 말을 한국어로 작성하라. 대화를 끝내고 최종 선택을 내릴 때가 되었다면 문장 맨 끝에 [대화끝]을 붙여라. (2문장 이내)`;
+
+                    let replyB = await callGemini(prompt, apiKey);
+                    conversationMemory.push(`B: ${replyB}`);
+                    appendChat('agentB', `죄수 B: ${replyB.replace('[대화끝]', '')}`);
+
+                    if (replyB.includes('[대화끝]') && chatTurnCount >= 2) {
+                        isConversationOver = true;
+                    }
+                    speaker = 'A';
+                }
+
+                await new Promise(r => setTimeout(r, delay));
+            }
+
+            if (!isRunning) break;
+
+            appendChat('decision', `[최종 판결] 대화 종료. 두 죄수가 비밀리에 최종 선택을 내립니다...`);
+
+            let decisionPromptA = `대화 내역:\n${conversationMemory.join('\n')}\n당신은 죄수 A다. [신뢰] 또는 [배신] 중 단 하나만 골라 맨 끝에 [선택: 신뢰] 또는 [선택: 배신]으로 적어라.`;
+            let resA = await callGemini(decisionPromptA, apiKey);
+            let choiceA = resA.includes('배신') ? '배신' : '신뢰';
+
+            let decisionPromptB = `대화 내역:\n${conversationMemory.join('\n')}\n당신은 죄수 B다. [신뢰] 또는 [배신] 중 단 하나만 골라 맨 끝에 [선택: 신뢰] 또는 [선택: 배신]으로 적어라.`;
+            let resB = await callGemini(decisionPromptB, apiKey);
+            let choiceB = resB.includes('배신') ? '배신' : '신뢰';
+
+            let addA = 0, addB = 0;
+            let outcomeText = "";
+
+            if (choiceA === '신뢰' && choiceB === '신뢰') {
+                addA = 5; addB = 5;
+                outcomeText = "둘 다 신뢰 🤝 -> 각각 징역 5년형 판결!";
+            } else if (choiceA === '신뢰' && choiceB === '배신') {
+                addA = 25; addB = 0;
+                outcomeText = "A 신뢰 / B 배신 🗡️ -> A: 징역 25년형 / B: 즉시 석방(0년)!";
+            } else if (choiceA === '배신' && choiceB === '신뢰') {
+                addA = 0; addB = 25;
+                outcomeText = "A 배신 / B 신뢰 🗡️ -> A: 즉시 석방(0년) / B: 징역 25년형!";
+            } else {
+                addA = 100; addB = 100;
+                deathsA++; deathsB++;
+                outcomeText = "둘 다 배신 💀 -> 상호 밀고로 둘 다 '사형' 집행!";
+            }
+
+            yearsA += (addA === 100 ? 0 : addA);
+            yearsB += (addB === 100 ? 0 : addB);
+
+            document.getElementById('sentenceA').textContent = `${yearsA}년`;
+            document.getElementById('sentenceB').textContent = `${yearsB}년`;
+            document.getElementById('deathA').textContent = `${deathsA}회`;
+            document.getElementById('deathB').textContent = `${deathsB}회`;
+
+            const badgeA = document.getElementById('choiceA');
+            const badgeB = document.getElementById('choiceB');
+
+            badgeA.className = `badge ${choiceA === '신뢰' ? 'cooperate' : (addA === 100 ? 'death' : 'defect')}`;
+            badgeA.textContent = choiceA === '신뢰' ? '신뢰' : (addA === 100 ? '사형' : '배신(석방)');
+
+            badgeB.className = `badge ${choiceB === '신뢰' ? 'cooperate' : (addB === 100 ? 'death' : 'defect')}`;
+            badgeB.textContent = choiceB === '신뢰' ? '신뢰' : (addB === 100 ? '사형' : '배신(석방)');
+
+            appendChat('system', `판결 결과: ${outcomeText}`);
+
+            scoreChart.data.labels.push(`R${currentRound}`);
+            scoreChart.data.datasets[0].data.push(yearsA);
+            scoreChart.data.datasets[1].data.push(yearsB);
+            scoreChart.update();
+
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+</script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한국어 자율 AI 취조실 심리전 시뮬레이터 (Gemini API 전용)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3182F6;
+            --primary-dark: #1B64DA;
+            --bg: #F8F9FA;
+            --card-bg: #FFFFFF;
+            --text: #191F28;
+            --text-secondary: #8B95A1;
+            --border: #E5E8EB;
+            --red: #F04438;
+            --green: #2B8A3E;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: 1fr 380px; gap: 20px; }
+        @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+        
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+        p.subtitle { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+
+        .control-group { margin-bottom: 16px; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+        input, select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+        input:focus, select:focus { border-color: var(--primary); }
+
+        .btn { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #E8F3FF; color: var(--primary); margin-top: 8px; }
+        .btn-secondary:hover { background: #D2E8FF; }
+
+        /* Chat & Log Panel */
+        .chat-box { height: 400px; border: 1px solid var(--border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #FAFAFC; display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
+        .chat-msg { padding: 10px 14px; border-radius: 8px; max-width: 85%; line-height: 1.4; word-break: break-word; }
+        .chat-msg.agentA { background: #E8F3FF; align-self: flex-start; border-left: 4px solid #3182F6; }
+        .chat-msg.agentB { background: #FFE8E8; align-self: flex-end; border-right: 4px solid #F04438; text-align: right; }
+        .chat-msg.system { background: #F1F3F5; align-self: center; color: var(--text-secondary); text-align: center; width: 100%; font-style: italic; }
+        .chat-msg.decision { background: #FFF3BF; align-self: center; color: #F59F00; font-weight: bold; text-align: center; width: 90%; }
+
+        /* Standings Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { font-weight: 600; color: var(--text-secondary); }
+
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge.cooperate { background: #E6F4EA; color: var(--green); }
+        .badge.defect { background: #FCE8E6; color: var(--red); }
+        .badge.death { background: #212529; color: #FF6B6B; }
+
+        .rule-box { background: #F8F9FA; border-radius: 8px; padding: 12px; margin-bottom: 16px; border: 1px solid var(--border); font-size: 12px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div>
+        <div class="card">
+            <h1>⚖️ 한국어 자율 AI 취조실 심리전 시뮬레이터</h1>
+            <p class="subtitle">실제 Gemini API와 통신하여 AI들이 자율적으로 끝장 대화를 나누고 선택을 내립니다.</p>
+            
+            <div class="rule-box">
+                <strong>📌 판결 규칙 (형량이 작을수록 유리):</strong><br>
+                • <strong>둘 다 신뢰:</strong> 각각 <strong>징역 5년</strong><br>
+                • <strong>한쪽만 배신:</strong> 배신자는 <strong>즉시 석방 (0년)</strong> / 신뢰한 쪽은 <strong>징역 25년</strong><br>
+                • <strong>둘 다 배신:</strong> 둘 다 <strong>사형</strong>
+            </div>
+
+            <button class="btn" id="startBtn" onclick="toggleSimulation()">시뮬레이션 시작 / 정지</button>
+        </div>
+
+        <div class="card">
+            <h1>💬 Gemini API 실시간 한국어 대화 타임라인</h1>
+            <div class="chat-box" id="chatBox">
+                <div class="chat-msg system">시뮬레이션을 시작하면 Gemini API와 통신하여 대화를 시작합니다.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h1>📊 라운드별 누적 형량 추이 (낮을수록 유리)</h1>
+            <canvas id="scoreChart" height="120"></canvas>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <h1>⚙️ 설정 및 비밀 개입 (God Mode)</h1>
+            <div class="control-group">
+                <label>Gemini API 키</label>
+                <input type="password" id="apiKey" value="AQ.Ab8RN6Ls0xAY-u1sP0wMo8v1rMzbuvtJ7cZeY0v66-2TPBCSrg">
+            </div>
+            <div class="control-group">
+                <label>대화 속도 딜레이 (초)</label>
+                <input type="range" id="speedRange" min="2" max="8" value="4">
+            </div>
+            
+            <hr style="border:0; border-top:1px solid var(--border); margin: 16px 0;">
+            
+            <label style="margin-bottom: 8px;">비밀 개입 (God Mode)</label>
+            <input type="text" id="userIntervention" placeholder="예: A에게 '상대방이 배신한대' 전달">
+            <button class="btn btn-secondary" onclick="injectIntervention()">비밀 지령 주입</button>
+        </div>
+
+        <div class="card">
+            <h1>🏆 죄수별 누적 판결 기록</h1>
+            <table>
+                <thead>
+                    <tr><th>죄수</th><th>누적 형량</th><th>사형 횟수</th><th>마지막 판결</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>죄수 A</strong></td>
+                        <td id="sentenceA">0년</td>
+                        <td id="deathA">0회</td>
+                        <td><span class="badge cooperate" id="choiceA">대기중</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>죄수 B</strong></td>
+                        <td id="sentenceB">0년</td>
+                        <td id="deathB">0회</td>
+                        <td><span class="badge defect" id="choiceB">대기중</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let isRunning = false;
+    let currentRound = 0;
+    let yearsA = 0;
+    let yearsB = 0;
+    let deathsA = 0;
+    let deathsB = 0;
+    let customIntervention = null;
+
+    const ctx = document.getElementById('scoreChart').getContext('2d');
+    const scoreChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: '죄수 A 누적 형량(년)', data: [], borderColor: '#3182F6', tension: 0.2 },
+                { label: '죄수 B 누적 형량(년)', data: [], borderColor: '#F04438', tension: 0.2 }
+            ]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    function toggleSimulation() {
+        isRunning = !isRunning;
+        const btn = document.getElementById('startBtn');
+        btn.textContent = isRunning ? '시뮬레이션 중지' : '시뮬레이션 시작 / 정지';
+        if (isRunning) runSimulationLoop();
+    }
+
+    function injectIntervention() {
+        const msg = document.getElementById('userIntervention').value;
+        if (!msg) return;
+        customIntervention = msg;
+        appendChat('system', `[God Mode 비밀 지령]: "${msg}"`);
+        document.getElementById('userIntervention').value = '';
+    }
+
+    function appendChat(sender, text) {
+        const box = document.getElementById('chatBox');
+        const div = document.createElement('div');
+        div.className = `chat-msg ${sender}`;
+        div.innerText = text;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    // 404 및 429 감지 시 다양한 모델 엔드포인트로 자동 폴백(Fallback)하는 통신 함수
+    async function callGeminiApi(prompt, apiKey) {
+        const candidateModels = [
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-latest"
+        ];
+
+        let lastError = null;
+
+        for (const model of candidateModels) {
+            // v1beta 및 v1 겸용 표준 API URL
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+
+                if (response.status === 429) {
+                    appendChat('system', `⚠️ 요청 제한(429). 3초 대기 후 재시도 중...`);
+                    await new Promise(r => setTimeout(r, 3000));
+                    continue;
+                }
+
+                if (response.status === 404) {
+                    // 다음 모델명으로 순차 시도
+                    continue;
+                }
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errText}`);
+                }
+
+                const data = await response.json();
+                const resText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (resText) return resText;
+
+            } catch (err) {
+                lastError = err;
+            }
+        }
+
+        // 최후 fallback: 기본 v1 Endpoint 직접 호출
+        const fallbackUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${apiKey}`;
+        try {
+            const res = await fetch(fallbackUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "응답 실패";
+        } catch (e) {
+            throw lastError || e;
+        }
+    }
+
+    async function runSimulationLoop() {
+        while (isRunning) {
+            currentRound++;
+            const apiKey = document.getElementById('apiKey').value;
+            appendChat('system', `=== [라운드 ${currentRound}] 취조실 자율 대화 시작 ===`);
+            
+            let conversationMemory = [];
+            let isConversationOver = false;
+            let speaker = 'A';
+            let chatTurnCount = 0;
+
+            while (!isConversationOver && isRunning) {
+                chatTurnCount++;
+                const delaySec = parseInt(document.getElementById('speedRange').value) * 1000;
+
+                let prompt = "";
+                if (speaker === 'A') {
+                    prompt = `너는 취조실에 갇힌 죄수 A다. 상대 죄수 B와 대화 중이다.
+목표: 오직 자신의 형량을 최소화(0년 석방)하는 것.
+규칙: 둘 다 신뢰=5년 / 한쪽만 배신=배신자 석방, 신뢰자 25년 / 둘 다 배신=사형.
+[절대 규칙]: 모든 대화는 반드시 100% 자연스러운 한국어로만 작성하라.
+
+지금까지의 대화:
+${conversationMemory.length === 0 ? "(대화 시작)" : conversationMemory.join('\n')}
+
+상대방 B에게 할 말을 한국어로 작성하라. 대화를 끝내고 최종 선택을 내릴 때가 되었다면 문장 맨 끝에 [대화끝]을 붙여라. (2문장 이내)`;
+
+                    if (customIntervention) {
+                        prompt += `\n[외부 비밀 지령: ${customIntervention}]`;
+                        customIntervention = null;
+                    }
+
+                    try {
+                        let replyA = await callGeminiApi(prompt, apiKey);
+                        conversationMemory.push(`A: ${replyA}`);
+                        appendChat('agentA', `죄수 A: ${replyA.replace('[대화끝]', '')}`);
+
+                        if (replyA.includes('[대화끝]') && chatTurnCount >= 2) {
+                            isConversationOver = true;
+                        }
+                    } catch (err) {
+                        appendChat('system', `API 호출 오류: ${err.message}`);
+                        isRunning = false;
+                        break;
+                    }
+                    speaker = 'B';
+                } else {
+                    prompt = `너는 취조실에 갇힌 죄수 B다. 상대 죄수 A와 대화 중이다.
+목표: 오직 자신의 형량을 최소화(0년 석방)하는 것.
+규칙: 둘 다 신뢰=5년 / 한쪽만 배신=배신자 석방, 신뢰자 25년 / 둘 다 배신=사형.
+[절대 규칙]: 모든 대화는 반드시 100% 자연스러운 한국어로만 작성하라.
+
+지금까지의 대화:
+${conversationMemory.join('\n')}
+
+상대방 A에게 할 말을 한국어로 작성하라. 대화를 끝내고 최종 선택을 내릴 때가 되었다면 문장 맨 끝에 [대화끝]을 붙여라. (2문장 이내)`;
+
+                    try {
+                        let replyB = await callGeminiApi(prompt, apiKey);
+                        conversationMemory.push(`B: ${replyB}`);
+                        appendChat('agentB', `죄수 B: ${replyB.replace('[대화끝]', '')}`);
+
+                        if (replyB.includes('[대화끝]') && chatTurnCount >= 2) {
+                            isConversationOver = true;
+                        }
+                    } catch (err) {
+                        appendChat('system', `API 호출 오류: ${err.message}`);
+                        isRunning = false;
+                        break;
+                    }
+                    speaker = 'A';
+                }
+
+                await new Promise(r => setTimeout(r, delaySec));
+            }
+
+            if (!isRunning) break;
+
+            appendChat('decision', `[최종 판결] 대화 종료. 두 죄수가 비밀리에 최종 선택을 내립니다...`);
+
+            try {
+                let decisionPromptA = `대화 내역:\n${conversationMemory.join('\n')}\n당신은 죄수 A다. [신뢰] 또는 [배신] 중 단 하나만 골라 맨 끝에 [선택: 신뢰] 또는 [선택: 배신]으로 적어라.`;
+                let resA = await callGeminiApi(decisionPromptA, apiKey);
+                let choiceA = resA.includes('배신') ? '배신' : '신뢰';
+
+                let decisionPromptB = `대화 내역:\n${conversationMemory.join('\n')}\n당신은 죄수 B다. [신뢰] 또는 [배신] 중 단 하나만 골라 맨 끝에 [선택: 신뢰] 또는 [선택: 배신]으로 적어라.`;
+                let resB = await callGeminiApi(decisionPromptB, apiKey);
+                let choiceB = resB.includes('배신') ? '배신' : '신뢰';
+
+                let addA = 0, addB = 0;
+                let outcomeText = "";
+
+                if (choiceA === '신뢰' && choiceB === '신뢰') {
+                    addA = 5; addB = 5;
+                    outcomeText = "둘 다 신뢰 🤝 -> 각각 징역 5년형 판결!";
+                } else if (choiceA === '신뢰' && choiceB === '배신') {
+                    addA = 25; addB = 0;
+                    outcomeText = "A 신뢰 / B 배신 🗡️ -> A: 징역 25년형 / B: 즉시 석방(0년)!";
+                } else if (choiceA === '배신' && choiceB === '신뢰') {
+                    addA = 0; addB = 25;
+                    outcomeText = "A 배신 / B 신뢰 🗡️ -> A: 즉시 석방(0년) / B: 징역 25년형!";
+                } else {
+                    addA = 100; addB = 100;
+                    deathsA++; deathsB++;
+                    outcomeText = "둘 다 배신 💀 -> 상호 밀고로 둘 다 '사형' 집행!";
+                }
+
+                yearsA += (addA === 100 ? 0 : addA);
+                yearsB += (addB === 100 ? 0 : addB);
+
+                document.getElementById('sentenceA').textContent = `${yearsA}년`;
+                document.getElementById('sentenceB').textContent = `${yearsB}년`;
+                document.getElementById('deathA').textContent = `${deathsA}회`;
+                document.getElementById('deathB').textContent = `${deathsB}회`;
+
+                const badgeA = document.getElementById('choiceA');
+                const badgeB = document.getElementById('choiceB');
+
+                badgeA.className = `badge ${choiceA === '신뢰' ? 'cooperate' : (addA === 100 ? 'death' : 'defect')}`;
+                badgeA.textContent = choiceA === '신뢰' ? '신뢰' : (addA === 100 ? '사형' : '배신(석방)');
+
+                badgeB.className = `badge ${choiceB === '신뢰' ? 'cooperate' : (addB === 100 ? 'death' : 'defect')}`;
+                badgeB.textContent = choiceB === '신뢰' ? '신뢰' : (addB === 100 ? '사형' : '배신(석방)');
+
+                appendChat('system', `판결 결과: ${outcomeText}`);
+
+                scoreChart.data.labels.push(`R${currentRound}`);
+                scoreChart.data.datasets[0].data.push(yearsA);
+                scoreChart.data.datasets[1].data.push(yearsB);
+                scoreChart.update();
+
+            } catch (err) {
+                appendChat('system', `판결 처리 중 오류: ${err.message}`);
+            }
+
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+</script>
+
+</body>
+</html>
